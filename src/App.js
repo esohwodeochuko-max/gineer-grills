@@ -1,3 +1,4 @@
+import './index.css';
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
