@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-// --- CONFIGURATION ---
 const firebaseConfig = {
     apiKey: "AIzaSyAy9Mwvf-P1IrPgsXLqlkzl_LPetjINga0",
     authDomain: "gineer-25215.firebaseapp.com",
@@ -16,25 +15,68 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const MENU = [
-  { id: 1, name: "Engine Platter", price: 12500, desc: "Full Ribs, Wings & Sides" },
-  { id: 2, name: "Diesel Burger", price: 6500, desc: "Double Patty & Sauce" },
-  { id: 3, name: "Turbo Wings", price: 4500, desc: "8pcs Spicy Glazed Wings" }
+  { id: 1, name: "Engine Platter", price: 12500 },
+  { id: 2, name: "Diesel Burger", price: 6500 },
+  { id: 3, name: "Turbo Wings", price: 4500 }
 ];
 
-function App() {
+export default function App() {
   const [view, setView] = useState('landing');
   const [cart, setCart] = useState([]);
-  const [form, setForm] = useState({ name: '', phone: '', email: '', address: '' });
+  const [form, setForm] = useState({ name: '', email: '' });
 
   const total = cart.reduce((s, i) => s + i.price, 0);
 
   const handlePay = () => {
-    if (!form.email || !form.name) {
-      alert("Please fill in your name and email");
-      return;
-    }
     const handler = window.PaystackPop.setup({
       key: "pk_test_94b6d06cc1036c6efbede409a9d3b4020b6e11aa",
+      email: form.email,
+      amount: total * 100,
+      currency: "NGN",
+      callback: async (res) => {
+        await addDoc(collection(db, 'gineer_orders'), {
+          ...form, items: cart.map(i => i.name), total, ref: res.reference, dbTimestamp: serverTimestamp()
+        });
+        setView('receipt');
+      }
+    });
+    handler.openIframe();
+  };
+
+  const style = {
+    bg: { backgroundColor: '#000', minHeight: '100vh', color: '#fff', padding: '20px', fontFamily: 'sans-serif' },
+    orange: { color: '#ea580c' },
+    btn: { backgroundColor: '#fff', color: '#000', width: '100%', padding: '20px', borderRadius: '12px', fontWeight: 'bold', border: 'none', marginTop: '20px' }
+  };
+
+  if (view === 'landing') return (
+    <div style={style.bg}>
+      <h1 style={{fontSize: '3rem', fontStyle: 'italic', fontWeight: '900'}}>GINEER<br/><span style={style.orange}>GRILLS.</span></h1>
+      <button onClick={() => setView('menu')} style={style.btn}>ORDER NOW</button>
+    </div>
+  );
+
+  if (view === 'menu') return (
+    <div style={style.bg}>
+      <h2 style={style.orange}>MENU</h2>
+      {MENU.map(i => (
+        <div key={i.id} style={{display: 'flex', justifyContent: 'space-between', padding: '15px', background: '#111', marginBottom: '10px', borderRadius: '10px'}}>
+          <span>{i.name}</span>
+          <button onClick={() => setCart([...cart, i])} style={{background: '#fff', border: 'none', borderRadius: '5px'}}>₦{i.price} +</button>
+        </div>
+      ))}
+      {cart.length > 0 && <button onClick={() => setView('checkout')} style={{...style.btn, background: '#ea580c', color: '#fff'}}>PROCEED (₦{total})</button>}
+    </div>
+  );
+
+  return (
+    <div style={style.bg}>
+      <h2>CHECKOUT</h2>
+      <input placeholder="Email" style={{width: '100%', padding: '10px', marginBottom: '10px'}} onChange={e => setForm({...form, email: e.target.value})} />
+      <button onClick={handlePay} style={style.btn}>PAY NOW</button>
+    </div>
+  );
+}      key: "pk_test_94b6d06cc1036c6efbede409a9d3b4020b6e11aa",
       email: form.email,
       amount: total * 100,
       currency: "NGN",
