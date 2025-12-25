@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-// Firebase Setup
+// Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyAy9Mwvf-P1IrPgsXLqlkzl_LPetjINga0",
     authDomain: "gineer-25215.firebaseapp.com",
@@ -16,9 +16,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const MENU = [
-  { id: 1, name: "Engine Platter", price: 12500, emoji: "🍖" },
-  { id: 2, name: "Diesel Burger", price: 6500, emoji: "🍔" },
-  { id: 3, name: "Turbo Wings", price: 4500, emoji: "🍗" }
+  { id: 1, name: "Engine Platter", price: 12500, label: "RIB" },
+  { id: 2, name: "Diesel Burger", price: 6500, label: "BGR" },
+  { id: 3, name: "Turbo Wings", price: 4500, label: "WNG" }
 ];
 
 function App() {
@@ -29,12 +29,106 @@ function App() {
   const total = cart.reduce((s, i) => s + i.price, 0);
 
   const handlePay = () => {
-    if (!email) {
-      alert("Please enter your email first!");
+    if (!email || !email.includes('@')) {
+      alert("Please enter a valid email address");
       return;
     }
 
-    // This calls the Paystack script we put in index.html
+    // Checking for Paystack again with a fallback
+    const paystack = window.PaystackPop;
+    if (!paystack) {
+      alert("Payment system is still loading. Please wait 5 seconds and try again.");
+      return;
+    }
+
+    const handler = paystack.setup({
+      key: "pk_test_94b6d06cc1036c6efbede409a9d3b4020b6e11aa",
+      email: email,
+      amount: total * 100,
+      currency: "NGN",
+      callback: async (res) => {
+        try {
+          await addDoc(collection(db, 'gineer_orders'), {
+            items: cart.map(i => i.name),
+            total,
+            email,
+            reference: res.reference,
+            date: new Date().toISOString(),
+            dbTimestamp: serverTimestamp()
+          });
+          setView('success');
+          setCart([]);
+        } catch (e) {
+          console.error(e);
+          alert("Order saved, but there was a sync error. We will contact you.");
+        }
+      },
+      onClose: () => alert("Transaction cancelled.")
+    });
+    handler.openIframe();
+  };
+
+  const s = {
+    main: { backgroundColor: '#000', minHeight: '100vh', color: '#fff', padding: '25px', fontFamily: 'Arial, sans-serif' },
+    hero: { fontSize: '4rem', fontWeight: '900', fontStyle: 'italic', color: '#fff', margin: '40px 0', lineHeight: '0.85' },
+    orange: { color: '#ea580c' },
+    btn: { backgroundColor: '#fff', color: '#000', width: '100%', padding: '18px', borderRadius: '12px', fontWeight: '900', border: 'none', fontSize: '1.1rem', cursor: 'pointer' },
+    item: { backgroundColor: '#111', padding: '15px', borderRadius: '15px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #222' }
+  };
+
+  if (view === 'landing') return (
+    <div style={s.main}>
+      <h1 style={s.hero}>GINEER<br/><span style={s.orange}>GRILLS.</span></h1>
+      <p style={{color: '#666', marginBottom: '40px', fontSize: '1.1rem'}}>High-Performance Grilling.</p>
+      <button onClick={() => setView('menu')} style={s.btn}>GET STARTED</button>
+    </div>
+  );
+
+  if (view === 'success') return (
+    <div style={{...s.main, textAlign: 'center', paddingTop: '100px'}}>
+      <h1 style={{fontSize: '5rem'}}>✅</h1>
+      <h2 style={s.orange}>ORDER CONFIRMED</h2>
+      <p>Check your email for details.</p>
+      <button onClick={() => setView('landing')} style={{...s.btn, marginTop: '30px'}}>RETURN HOME</button>
+    </div>
+  );
+
+  return (
+    <div style={s.main}>
+      <div style={{display:'flex', justifyContent:'space-between', marginBottom:'30px'}}>
+        <h2 style={s.orange}>THE MENU</h2>
+        <button onClick={() => setView('landing')} style={{background:'none', border:'none', color:'#444'}}>Close</button>
+      </div>
+
+      {MENU.map(i => (
+        <div key={i.id} style={s.item}>
+          <div>
+            <div style={{fontSize: '0.7rem', color: '#ea580c', fontWeight: 'bold'}}>{i.label}</div>
+            <div style={{fontWeight: 'bold', fontSize: '1.1rem'}}>{i.name}</div>
+            <div style={{color: '#888'}}>₦{i.price.toLocaleString()}</div>
+          </div>
+          <button onClick={() => setCart([...cart, i])} style={{backgroundColor: '#fff', border: 'none', padding: '8px 12px', borderRadius: '8px', fontWeight: 'bold'}}>ADD</button>
+        </div>
+      ))}
+
+      {cart.length > 0 && (
+        <div style={{marginTop: '40px', borderTop: '2px solid #111', paddingTop: '20px'}}>
+          <input 
+            placeholder="Enter Email for Delivery" 
+            style={{width: '100%', padding: '15px', borderRadius: '10px', border: '1px solid #333', backgroundColor: '#000', color: '#fff', marginBottom: '15px'}}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <button onClick={handlePay} style={{...s.btn, backgroundColor: '#ea580c', color: '#fff'}}>
+            PAY ₦{total.toLocaleString()}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);    // This calls the Paystack script we put in index.html
     if (window.PaystackPop) {
       const handler = window.PaystackPop.setup({
         key: "pk_test_94b6d06cc1036c6efbede409a9d3b4020b6e11aa",
