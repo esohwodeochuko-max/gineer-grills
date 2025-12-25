@@ -1,1 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GINEER GRILLS</title>
+    <!-- External Engines -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { background-color: black; color: white; margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+        .orange-brand { color: #ea580c; }
+        .bg-orange-brand { background-color: #ea580c; }
+        /* Hide scrollbar for cleaner look */
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        function App() {
+            const [view, setView] = useState('landing');
+            const [cart, setCart] = useState([]);
+            const [email, setEmail] = useState('');
+
+            const MENU = [
+                { id: 1, name: "Engine Platter", price: 12500, icon: "🍖", desc: "Full Ribs & Sides" },
+                { id: 2, name: "Diesel Burger", price: 6500, icon: "🍔", desc: "Double Decker Beast" },
+                { id: 3, name: "Turbo Wings", price: 4500, icon: "🍗", desc: "8pcs Spicy Glazed" }
+            ];
+
+            const total = cart.reduce((s, i) => s + i.price, 0);
+
+            const handlePay = () => {
+                if (!email || !email.includes('@')) return alert("Enter a valid email for delivery!");
+                
+                const handler = window.PaystackPop.setup({
+                    key: "pk_test_94b6d06cc1036c6efbede409a9d3b4020b6e11aa",
+                    email: email,
+                    amount: total * 100,
+                    currency: "NGN",
+                    callback: (res) => {
+                        setView('success');
+                        setCart([]);
+                    }
+                });
+                handler.openIframe();
+            };
+
+            if (view === 'landing') return (
+                <div className="flex flex-col justify-center min-h-screen p-10 bg-black">
+                    <h1 className="text-7xl font-black italic leading-none tracking-tighter uppercase animate-pulse">
+                        GINEER<br/><span className="orange-brand">GRILLS.</span>
+                    </h1>
+                    <p className="mt-4 text-zinc-500 font-bold uppercase tracking-widest text-sm">Heavy Duty Grilling</p>
+                    <button 
+                        onClick={() => setView('menu')} 
+                        className="mt-12 bg-white text-black font-black py-5 rounded-2xl text-xl uppercase active:scale-95 transition-all"
+                    >
+                        Order Now
+                    </button>
+                </div>
+            );
+
+            if (view === 'success') return (
+                <div className="flex flex-col justify-center items-center min-h-screen p-8 text-center bg-black">
+                    <div className="text-9xl mb-4">🔥</div>
+                    <h2 className="text-4xl font-black orange-brand uppercase italic">Engine Started!</h2>
+                    <p className="text-zinc-400 mt-4">Payment received. We are prepping your meal.</p>
+                    <button 
+                        onClick={() => setView('landing')} 
+                        className="mt-10 w-full bg-white text-black font-bold py-4 rounded-xl uppercase"
+                    >
+                        Back to Home
+                    </button>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen bg-black p-6 pb-48">
+                    <div className="flex justify-between items-center mb-8">
+                        <h2 className="text-2xl font-black orange-brand italic">THE MENU</h2>
+                        <button onClick={() => setView('landing')} className="text-zinc-500 font-bold uppercase text-xs">Close</button>
+                    </div>
+
+                    {MENU.map(item => (
+                        <div key={item.id} className="bg-zinc-900/50 p-5 rounded-3xl mb-4 flex justify-between items-center border border-zinc-800/50 backdrop-blur-sm">
+                            <div className="flex items-center gap-4">
+                                <div className="text-3xl bg-black w-12 h-12 flex items-center justify-center rounded-2xl">{item.icon}</div>
+                                <div>
+                                    <div className="font-black text-lg text-white uppercase italic">{item.name}</div>
+                                    <div className="orange-brand font-bold">₦{item.price.toLocaleString()}</div>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setCart([...cart, item])} 
+                                className="bg-white text-black px-4 py-2 rounded-xl font-black text-xs uppercase active:bg-orange-600 active:text-white transition-colors"
+                            >
+                                Add
+                            </button>
+                        </div>
+                    ))}
+
+                    {cart.length > 0 && (
+                        <div className="fixed bottom-0 left-0 w-full p-6 bg-black/90 border-t border-zinc-800 backdrop-blur-xl">
+                            <input 
+                                type="email" 
+                                placeholder="YOUR EMAIL FOR DELIVERY" 
+                                className="w-full bg-zinc-900 p-5 rounded-2xl mb-4 text-white font-bold border border-zinc-800 placeholder:text-zinc-700 outline-none focus:border-orange-600 transition-all" 
+                                onChange={(e) => setEmail(e.target.value)} 
+                            />
+                            <button 
+                                onClick={handlePay} 
+                                className="w-full bg-orange-brand text-white font-black py-5 rounded-2xl text-xl shadow-lg shadow-orange-900/40 uppercase"
+                            >
+                                Checkout ₦{total.toLocaleString()}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+
 
